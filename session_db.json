@@ -1,0 +1,25 @@
+{
+  "sessions": [
+    {
+      "id": "788543863:788543863",
+      "data": {
+        "formActive": false,
+        "geo": null
+      }
+    },
+    {
+      "id": "428075669:428075669",
+      "data": {
+        "formActive": false,
+        "geo": "GR"
+      }
+    },
+    {
+      "id": "6562669867:6562669867",
+      "data": {
+        "formActive": false,
+        "geo": null
+      }
+    }
+  ]
+}

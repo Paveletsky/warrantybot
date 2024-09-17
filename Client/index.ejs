@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="css/all.css" rel="stylesheet" />
+    <title>Сенсор</title>
+</head>
+
+<body>
+    <div class="container">
+        <img id="pdfViewer" class="pdf-viewer" src="<%= filePath %>" type="application/png">
+        <div id="sig-panel" class="signature-panel">
+            <canvas id="signatureCanvas" class="signature-canvas"></canvas>
+            <div class="signature-text">Нарисуйте свою подпись</div>
+            <div>
+                <button id="clearSignature">Очистить</button>
+                <button id="saveSignature">Подтвердить</button>
+            </div>
+        </div>
+        <div id="readyText" class="ready-text">Готово ✓</div>
+    </div>
+</body>
+
+<script>
+    const filename = "<%= filename %>"
+
+    const canvas = document.getElementById('signatureCanvas');
+    const ctx = canvas.getContext('2d');
+    const signatureText = document.querySelector('.signature-text');
+    let drawing = false;
+
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+
+    function startDrawing(e) {
+        e.preventDefault();
+        drawing = true;
+        signatureText.style.display = 'none';
+        ctx.beginPath();
+        const [x, y] = getCoordinates(e);
+        ctx.moveTo(x, y);
+    }
+
+    function draw(e) {
+        if (!drawing) return;
+        e.preventDefault();
+        const [x, y] = getCoordinates(e);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+    }
+
+    function stopDrawing() {
+        if (!drawing) return;
+        drawing = false;
+        ctx.closePath();
+    }
+
+    function getCoordinates(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        let x, y;
+        if (e.touches) {
+            x = e.touches[0].clientX - rect.left;
+            y = e.touches[0].clientY - rect.top;
+        } else {
+            x = e.clientX - rect.left;
+            y = e.clientY - rect.top;
+        }
+        return [x * scaleX, y * scaleY];
+    }
+
+    function clearSignature() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        signatureText.style.display = 'block';
+    }
+    
+    async function saveSignature() {
+        const img = document.getElementById('pdfViewer');
+        const signatureData = canvas.toDataURL('image/png');
+
+        const baseImage = await loadImage(img.src);
+        const signatureImage = await loadImage(signatureData);
+
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = baseImage.width;
+        finalCanvas.height = baseImage.height;
+        const finalCtx = finalCanvas.getContext('2d');
+
+        finalCtx.drawImage(baseImage, 0, 0);
+        finalCtx.drawImage(signatureImage, 1200, 2297); // Adjust the coordinates as needed
+
+        const finalImageData = finalCanvas.toDataURL('image/png');
+        img.src = finalImageData;
+
+        // Отправляем Data URL как строку на сервер
+        fetch('/api/save-image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ imageData: finalImageData, filename: `${filename}.png` })
+        })
+        .then(response => response.json())
+        .then(result => {
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    function loadImage(src) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.src = src;
+        });
+    }
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseleave', stopDrawing);
+
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', stopDrawing);
+    canvas.addEventListener('touchcancel', stopDrawing);
+
+    document.getElementById('clearSignature').addEventListener('click', clearSignature);
+    document.getElementById('saveSignature').addEventListener('click', saveSignature);
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const saveButton = document.getElementById("saveSignature");
+        const signaturePanel = document.getElementById('sig-panel');
+        const readyText = document.getElementById("readyText");
+
+        const image = document.getElementById("pdfViewer")
+        image.src = "<%= filePath %>"
+
+        const c = "<%= confirmed %>"
+        if (c == "true") {
+            signaturePanel.classList.add("hidden");
+            readyText.classList.add("visible");
+            return;
+        }
+
+        saveButton.addEventListener("click", function() {
+            signaturePanel.classList.add("hidden");
+            readyText.classList.add("visible");
+
+            fetch('/api/confirm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({id: filename})
+            })
+            .then(response => response.json())
+            .then(result => {
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    });
+</script></html>
