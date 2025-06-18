@@ -8,7 +8,7 @@ import { TelegrafModule } from 'nestjs-telegraf';
   imports: [
     TypeOrmModule.forFeature([Users]),
     TelegrafModule.forRoot({
-      token: process.env.BOT_TOKEN,
+        token: process.env.BOT_TOKEN,
     }),
   ],
   providers: [BotService],
